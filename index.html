@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Карта Школ и УДО Новокузнецка</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Подключение CSS Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+        }
+        #map {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        .control-panel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 8px;
+            border-radius: 5px;
+            box-shadow: 0 1px 5px rgba(0,0,0,0.4);
+            width: 180px; /* Примерно в 3 раза уже стандартного */
+            font-size: 12px;
+        }
+        .control-panel select {
+            width: 100%;
+            font-size: 12px;
+            padding: 4px;
+        }
+        /* Стили для иконок */
+        .school-icon-available {
+            background-color: #28a745;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            color: white;
+            text-align: center;
+            line-height: 24px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .school-icon-unavailable {
+            background-color: #dc3545;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            color: white;
+            text-align: center;
+            line-height: 24px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .udo-icon {
+            background-color: #e83e8c;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            color: white;
+            text-align: center;
+            line-height: 24px;
+            font-weight: bold;
+            font-size: 12px;
+        }
+        .cross::after {
+            content: "✗";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(220, 53, 69, 0.8);
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div class="control-panel">
+        <label for="school-select">Выберите школу:</label>
+        <select id="school-select">
+            <option value="all">Показать все</option>
+            <!-- Опции будут добавлены скриптом -->
+        </select>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        var map = L.map('map').setView([53.758, 87.108], 11);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        }).addTo(map);
+
+        var schoolsData = [
+            {"school_name": "Муниципальное общеобразовательное учреждение \" Специальная (коррекционная) начальная школа-детский сад № 235", "school_lat": 53.89191, "school_lon": 87.1204, "nearest_udo": "МБ ОУ ДО «Дом детского творчества № 5»", "distance_km": 0.3, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \" Специальная (коррекционная) специальная школа интернат № 80", "school_lat": 53.74954, "school_lon": 87.11366, "nearest_udo": "МАУ ДО «Детско-юношеский центр «Орион»", "distance_km": 0.38, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение Средняя общеобразовательная школа № 91", "school_lat": 53.74584, "school_lon": 87.12456, "nearest_udo": "МБ ОУ ДО «Городской Дворец детского (юношеского) творчества им. Н.К. Крупской»", "distance_km": 0.51, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Специальная (коррекционная) общеобразовательная школа-интернат № 68\"", "school_lat": 53.79304, "school_lon": 87.23308, "nearest_udo": "МБУ ДО «Центр детского (юношеского) технического творчества «Меридиан»", "distance_km": 2.68, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Специальная (коррекционная) общеобразовательная школа-интернат № 88\"", "school_lat": 53.7906, "school_lon": 87.2234, "nearest_udo": "МБУ ДО «Центр детского (юношеского) технического творчества «Меридиан»", "distance_km": 2.03, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 64", "school_lat": 53.79268, "school_lon": 87.33785, "nearest_udo": "МБУ ДО «Дом творчества «Вектор»", "distance_km": 1.07, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Основная общеобразовательная школа № 83", "school_lat": 53.84324, "school_lon": 87.18803, "nearest_udo": "МБУ ДО «Центр детского (юношеского) технического творчества «Меридиан»", "distance_km": 1.09, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Открытая/сменная/ общеобразовательная школа № 64", "school_lat": 53.78247, "school_lon": 87.31504, "nearest_udo": "МБУ ДО «Центр развития творчества «Уголёк»", "distance_km": 0.57, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 100", "school_lat": 53.75479, "school_lon": 87.13318, "nearest_udo": "МАУ ДО «Военно-патриотический парк «Патриот»", "distance_km": 0.91, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Центр лечебной педагогики и дифференцированного обучения", "school_lat": 53.77886, "school_lon": 87.21454, "nearest_udo": "МБУ ДО «Дом детского творчества №1»", "distance_km": 0.71, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 12", "school_lat": 53.76104, "school_lon": 87.11643, "nearest_udo": "МАУ ДО «Детско-юношеский центр «Орион»", "distance_km": 0.19, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 56", "school_lat": 53.78446, "school_lon": 87.28768, "nearest_udo": "МБУ ДО «Центр развития творчества «Уголёк»", "distance_km": 0.85, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 71", "school_lat": 53.77888, "school_lon": 87.21317, "nearest_udo": "МБУ ДО «Дом детского творчества №1»", "distance_km": 0.65, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 96", "school_lat": 53.77311, "school_lon": 87.20788, "nearest_udo": "МБУ ДО «Дом детского творчества №1»", "distance_km": 0.24, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Естественнонаучный лицей № 104", "school_lat": 53.77891, "school_lon": 87.20704, "nearest_udo": "МБУ ДО «Центр детского (юношеского) технического творчества «Меридиан»", "distance_km": 0.37, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 4", "school_lat": 53.77504, "school_lon": 87.21423, "nearest_udo": "МБУ ДО «Дом детского творчества №1»", "distance_km": 0.55, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 24", "school_lat": 53.78511, "school_lon": 87.2222, "nearest_udo": "МБУ ДО «Дом детского творчества №1»", "distance_km": 1.56, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 19", "school_lat": 53.79378, "school_lon": 87.28106, "nearest_udo": "МБУ ДО «Центр развития творчества «Уголёк»", "distance_km": 1.88, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 29", "school_lat": 53.78569, "school_lon": 87.31721, "nearest_udo": "МБУ ДО «Центр развития творчества «Уголёк»", "distance_km": 0.82, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 41", "school_lat": 53.75131, "school_lon": 87.11512, "nearest_udo": "МАУ ДО «Детско-юношеский центр «Орион»", "distance_km": 0.16, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Специальная общеобразовательная школа № 30", "school_lat": 53.77461, "school_lon": 87.20434, "nearest_udo": "МБУ ДО «Дом детского творчества №1»", "distance_km": 0.11, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Специальная общеобразовательная школа-интернат 8 вида № 53", "school_lat": 53.7815021, "school_lon": 87.3064195, "nearest_udo": "МБУ ДО «Центр развития творчества «Уголёк»", "distance_km": 0.06, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 40", "school_lat": 53.76043, "school_lon": 87.21362, "nearest_udo": "МАУ ДО «Детско – юношеская спортивная школа №5»", "distance_km": 1.54, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 60", "school_lat": 53.79544, "school_lon": 87.34546, "nearest_udo": "МБУ ДО «Дом творчества «Вектор»", "distance_km": 0.59, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 50", "school_lat": 53.77559, "school_lon": 87.19486, "nearest_udo": "МБУ ДО «Центр детского (юношеского) технического творчества «Меридиан»", "distance_km": 0.52, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Гимназия № 10", "school_lat": 53.77168, "school_lon": 87.18742, "nearest_udo": "МАУ ДО «Детско – юношеская спортивная школа №5»", "distance_km": 0.9, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Лицей № 27", "school_lat": 53.77736, "school_lon": 87.28739, "nearest_udo": "МБУ ДО «Центр развития творчества «Уголёк»", "distance_km": 0.17, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Лицей № 76", "school_lat": 53.77732, "school_lon": 87.29016, "nearest_udo": "МБУ ДО «Центр развития творчества «Уголёк»", "distance_km": 0.35, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Вечерняя (сменная) общеобразовательная школа № 2", "school_lat": 53.89144, "school_lon": 87.11024, "nearest_udo": "МБ ОУ ДО Детско-юношеская спортивная школа №7", "distance_km": 0.5, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение детский дом-школа № 95 \"Дом детства\"", "school_lat": 53.83945, "school_lon": 87.17364, "nearest_udo": "МБУ ДО Детско-юношеская спортивная школа № 3", "distance_km": 0.34, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Женская гимназия-интернат", "school_lat": 53.81726, "school_lon": 87.15874, "nearest_udo": "МБУ ДО «Дом детского творчества № 4»", "distance_km": 0.69, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Эстетическая гимназия № 32", "school_lat": 53.89814, "school_lon": 87.13637, "nearest_udo": "МБ ОУ ДО «Дом детского творчества № 5»", "distance_km": 0.97, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Гимназия № 59", "school_lat": 53.89457, "school_lon": 87.1357, "nearest_udo": "МБ ОУ ДО «Дом детского творчества № 5»", "distance_km": 0.75, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Лицей № 35", "school_lat": 53.82326, "school_lon": 87.16633, "nearest_udo": "МБУ ДО Детско-юношеская спортивная школа № 3", "distance_km": 0.33, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Основная общеобразовательная школа № 33", "school_lat": 53.83414, "school_lon": 87.1911, "nearest_udo": "МБУ ДО «Центр детского (юношеского) технического творчества «Меридиан»", "distance_km": 0.3, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Основная общеобразовательная школа № 89", "school_lat": 53.79917, "school_lon": 87.14906, "nearest_udo": "МБУ ДО «Дом детского творчества № 4»", "distance_km": 2.61, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Вечерняя (сменная) общеобразовательная школа № 17", "school_lat": 53.83636, "school_lon": 87.17281, "nearest_udo": "МБУ ДО «Центр детского (юношеского) технического творчества «Меридиан»", "distance_km": 0.01, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 14", "school_lat": 53.89861, "school_lon": 87.13395, "nearest_udo": "МБ ОУ ДО «Дом детского творчества № 5»", "distance_km": 0.88, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 65", "school_lat": 53.89429, "school_lon": 87.1323, "nearest_udo": "МБ ОУ ДО «Дом детского творчества № 5»", "distance_km": 0.52, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 94", "school_lat": 53.89777, "school_lon": 87.12042, "nearest_udo": "МБ ОУ ДО «Дом детского творчества № 5»", "distance_km": 0.62, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 107", "school_lat": 53.90059, "school_lon": 87.12233, "nearest_udo": "МБ ОУ ДО «Дом детского творчества № 5»", "distance_km": 0.88, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 5", "school_lat": 53.82754, "school_lon": 87.16089, "nearest_udo": "МБУ ДО Детско-юношеская спортивная школа № 3", "distance_km": 0.44, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 79", "school_lat": 53.81812, "school_lon": 87.16311, "nearest_udo": "МБУ ДО Детско-юношеская спортивная школа № 3", "distance_km": 0.77, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 81", "school_lat": 53.83096, "school_lon": 87.18917, "nearest_udo": "МБУ ДО «Центр детского (юношеского) технического творчества «Меридиан»", "distance_km": 0.16, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 93", "school_lat": 53.83505, "school_lon": 87.17919, "nearest_udo": "МБУ ДО «Центр детского (юношеского) технического творчества «Меридиан»", "distance_km": 0.13, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Санаторная школа-интернат № 82", "school_lat": 53.82514, "school_lon": 87.18236, "nearest_udo": "МБУ ДО «Станция юных натуралистов»", "distance_km": 0.25, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Специальная (коррекционная) общеобразовательная школа № 58\" VIII вида", "school_lat": 53.83153, "school_lon": 87.18738, "nearest_udo": "МБУ ДО «Центр детского (юношеского) технического творчества «Меридиан»", "distance_km": 0.08, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 102", "school_lat": 53.83728, "school_lon": 87.17585, "nearest_udo": "МБУ ДО Детско-юношеская спортивная школа № 3", "distance_km": 0.15, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 22", "school_lat": 53.82791, "school_lon": 87.17306, "nearest_udo": "МБУ ДО Детско-юношеская спортивная школа № 3", "distance_km": 0.36, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 3", "school_lat": 53.81812, "school_lon": 87.16311, "nearest_udo": "МБУ ДО Детско-юношеская спортивная школа № 3", "distance_km": 0.77, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Гимназия № 46", "school_lat": 53.84153, "school_lon": 87.16457, "nearest_udo": "МБУ ДО «Центр детского (юношеского) технического творчества «Меридиан»", "distance_km": 0.8, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Детский дом № 4", "school_lat": 53.82086, "school_lon": 87.17462, "nearest_udo": "МБУ ДО Детско-юношеская спортивная школа № 3", "distance_km": 0.68, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Гимназия № 73", "school_lat": 53.74337, "school_lon": 87.14515, "nearest_udo": "МАУ ДО «Военно-патриотический парк «Патриот»", "distance_km": 0.85, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Основная общеобразовательная школа № 23", "school_lat": 53.715110200000005, "school_lon": 87.0857128, "nearest_udo": "МБ ОУ ДО «Городской Дворец детского (юношеского) творчества им. Н.К. Крупской»", "distance_km": 4.45, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Основная общеобразовательная школа № 6", "school_lat": 53.74313, "school_lon": 87.13199, "nearest_udo": "МБ ОУ ДО «Городской Дворец детского (юношеского) творчества им. Н.К. Крупской»", "distance_km": 1.06, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 36\".", "school_lat": 53.89104, "school_lon": 87.10825, "nearest_udo": "МБ ОУ ДО Детско-юношеская спортивная школа №7", "distance_km": 0.55, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Специальная (коррекционная) общеобразовательная школа-интернат № 38 II вида", "school_lat": 53.76125, "school_lon": 87.10767, "nearest_udo": "МАУ ДО «Детско-юношеский центр «Орион»", "distance_km": 0.55, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Специальная (коррекционная) начальная школа-детский сад № 10 ( V вида).", "school_lat": 53.75832, "school_lon": 87.1276, "nearest_udo": "МБУ ДО «Станция юных натуралистов»", "distance_km": 0.7, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение \"Средняя общеобразовательная школа № 87", "school_lat": 53.74844, "school_lon": 87.14165, "nearest_udo": "МАУ ДО «Военно-патриотический парк «Патриот»", "distance_km": 0.38, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Специальная (коррекционная) общеобразовательная школа № 78\" VIII вида.", "school_lat": 53.8878903, "school_lon": 87.1099174, "nearest_udo": "МБ ОУ ДО Детско-юношеская спортивная школа №7", "distance_km": 0.89, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 37", "school_lat": 53.71556, "school_lon": 87.12821, "nearest_udo": "МБ ОУ ДО «Городской Дворец детского (юношеского) творчества им. Н.К. Крупской»", "distance_km": 3.82, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 43", "school_lat": 53.74335, "school_lon": 87.03431, "nearest_udo": "МБУ ДО «Дом детского творчества № 2»", "distance_km": 4.47, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 77", "school_lat": 53.89264, "school_lon": 87.12218, "nearest_udo": "МБ ОУ ДО «Дом детского творчества № 5»", "distance_km": 0.17, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 9 имени В.К. Демидова", "school_lat": 53.74827, "school_lon": 87.05826, "nearest_udo": "МБУ ДО «Дом детского творчества № 2»", "distance_km": 2.8, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 2", "school_lat": 53.77244, "school_lon": 87.10146, "nearest_udo": "МБУ ДО «Центр детского (юношеского) технического творчества «Меридиан»", "distance_km": 1.27, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная гимназия № 70", "school_lat": 53.76135, "school_lon": 87.15773, "nearest_udo": "МБУ ДО Детско-юношеская спортивная школа № 3", "distance_km": 0.92, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Вечерняя (сменная) общеобразовательная школа № 5", "school_lat": 53.76053, "school_lon": 87.10434, "nearest_udo": "МБУ ДО «Дом детского творчества № 2»", "distance_km": 0.62, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \" Начальная общеобразовательная школа № 110", "school_lat": 53.71176, "school_lon": 87.13987, "nearest_udo": "МАУ ДО «Детско-юношеский центр «Орион»", "distance_km": 4.18, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная гимназия № 48", "school_lat": 53.71242, "school_lon": 87.14324, "nearest_udo": "МАУ ДО «Детско-юношеский центр «Орион»", "distance_km": 4.05, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 52", "school_lat": 53.766, "school_lon": 87.11506, "nearest_udo": "МАУ ДО «Детско-юношеский центр «Орион»", "distance_km": 0.19, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 105", "school_lat": 53.762, "school_lon": 87.13527, "nearest_udo": "МАУ ДО «Детско-юношеский центр «Орион»", "distance_km": 1.22, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 16", "school_lat": 53.73622, "school_lon": 87.24571, "nearest_udo": "МАУ ДО «Военно-патриотический парк «Патриот»", "distance_km": 2.56, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Гимназия № 62", "school_lat": 53.7486404, "school_lon": 87.1627263, "nearest_udo": "МАУ ДО «Детско-юношеский центр «Орион»", "distance_km": 0.37, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 92", "school_lat": 53.74491, "school_lon": 87.11303, "nearest_udo": "МБ ОУ ДО «Городской Дворец детского (юношеского) творчества им. Н.К. Крупской»", "distance_km": 0.7, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 98", "school_lat": 53.75192, "school_lon": 87.09605, "nearest_udo": "МБУ ДО «Дом детского творчества № 2»", "distance_km": 0.5, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Основная общеобразовательная школа № 45", "school_lat": 53.71046, "school_lon": 87.10538, "nearest_udo": "МБ ОУ ДО «Городской Дворец детского (юношеского) творчества им. Н.К. Крупской»", "distance_km": 4.46, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 69", "school_lat": 53.67631, "school_lon": 86.95726, "nearest_udo": "МБУ ДО «Дом детского творчества № 2»", "distance_km": 12.88, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 1", "school_lat": 53.7383981, "school_lon": 87.1180201, "nearest_udo": "МБ ОУ ДО «Городской Дворец детского (юношеского) творчества им. Н.К. Крупской»", "distance_km": 1.25, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Лицей № 47", "school_lat": 53.747, "school_lon": 87.04898, "nearest_udo": "МБУ ДО «Дом детского творчества № 2»", "distance_km": 3.42, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 54", "school_lat": 53.74949, "school_lon": 87.05882, "nearest_udo": "МБУ ДО «Дом детского творчества № 2»", "distance_km": 2.72, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная гимназия № 44", "school_lat": 53.75967, "school_lon": 87.15801, "nearest_udo": "МБУ ДО Детско-юношеская спортивная школа № 3", "distance_km": 0.77, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 8", "school_lat": 53.75745, "school_lon": 87.10135, "nearest_udo": "МБУ ДО «Дом детского творчества № 2»", "distance_km": 0.23, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 31", "school_lat": 53.74927, "school_lon": 87.14312, "nearest_udo": "МАУ ДО «Военно-патриотический парк «Патриот»", "distance_km": 0.24, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 101", "school_lat": 53.71176, "school_lon": 87.13987, "nearest_udo": "МАУ ДО «Детско-юношеский центр «Орион»", "distance_km": 4.18, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Лицей № 34", "school_lat": 53.75549, "school_lon": 87.14683, "nearest_udo": "МБ ОУ ДО «Городской Дворец детского (юношеского) творчества им. Н.К. Крупской»", "distance_km": 0.33, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Специальная (коррекционная) начальная школа-детский сад № 260 ( IV вида).", "school_lat": 53.89833, "school_lon": 87.13869, "nearest_udo": "МБ ОУ ДО «Дом детского творчества № 5»", "distance_km": 1.1, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Сары-Чумышская основная общеобразовательная школа", "school_lat": 53.75946, "school_lon": 87.41368, "nearest_udo": "МБУ ДО «Дом творчества «Вектор»", "distance_km": 5.49, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Специальная (коррекционная) начальная школа-детский сад № 225 (IV вида)", "school_lat": 53.74273, "school_lon": 87.13265, "nearest_udo": "МБ ОУ ДО «Городской Дворец детского (юношеского) творчества им. Н.К. Крупской»", "distance_km": 1.12, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Специальная (коррекционная) начальная школа-детский сад № 10 ( V вида).", "school_lat": 53.75925, "school_lon": 87.16095, "nearest_udo": "МБУ ДО Детско-юношеская спортивная школа № 3", "distance_km": 0.86, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 97", "school_lat": 53.76689, "school_lon": 87.12077, "nearest_udo": "МБУ ДО «Центр детского (юношеского) технического творчества «Меридиан»", "distance_km": 0.19, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 26", "school_lat": 53.76003, "school_lon": 87.12898, "nearest_udo": "МБУ ДО «Станция юных натуралистов»", "distance_km": 0.83, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Средняя общеобразовательная школа № 18", "school_lat": 53.82306, "school_lon": 87.15549, "nearest_udo": "МБУ ДО «Дом детского творчества № 4»", "distance_km": 0.16, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение \"Михайловская основная общеобразовательная школа", "school_lat": 53.63006, "school_lon": 87.00973, "nearest_udo": "МБ ОУ ДО «Городской Дворец детского (юношеского) творчества им. Н.К. Крупской»", "distance_km": 15.17, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Казанковская средняя общеобразовательная школа", "school_lat": 53.99352, "school_lon": 87.2692, "nearest_udo": "МБ ОУ ДО «Дом детского творчества № 5»", "distance_km": 14.68, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Осиноплесская средняя общеобразовательная школа", "school_lat": 54.21176, "school_lon": 87.5549, "nearest_udo": "МБ ОУ ДО «Дом детского творчества № 5»", "distance_km": 45.32, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Куйбышевская средняя общеобразовательная школа", "school_lat": 53.72115, "school_lon": 86.94034, "nearest_udo": "МБУ ДО «Дом детского творчества № 2»", "distance_km": 11.14, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение Средняя общеобразовательная школа № 72 с углубленным изучением англ. Языка", "school_lat": 53.75965, "school_lon": 87.1431, "nearest_udo": "МБ ОУ ДО «Городской Дворец детского (юношеского) творчества им. Н.К. Крупской»", "distance_km": 0.82, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Гимназия № 17 им. В.П. Чкалова", "school_lat": 53.7477, "school_lon": 87.12767, "nearest_udo": "МБ ОУ ДО «Городской Дворец детского (юношеского) творчества им. Н.К. Крупской»", "distance_km": 0.54, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Средняя общеобразовательная школа № 13", "school_lat": 53.89544, "school_lon": 87.12151, "nearest_udo": "МБ ОУ ДО «Дом детского творчества № 5»", "distance_km": 0.36, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Лицей № 84", "school_lat": 53.75339, "school_lon": 87.11388, "nearest_udo": "МАУ ДО «Детско-юношеский центр «Орион»", "distance_km": 0.18, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 103", "school_lat": 53.74892, "school_lon": 87.15908, "nearest_udo": "МАУ ДО «Детско-юношеский центр «Орион»", "distance_km": 0.17, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение Средняя общеобразовательная школа № 67", "school_lat": 53.76159, "school_lon": 87.15112, "nearest_udo": "МБ ОУ ДО «Городской Дворец детского (юношеского) творчества им. Н.К. Крупской»", "distance_km": 0.84, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 4 \"Центр открытого непрерывного образования\"", "school_lat": 53.75454, "school_lon": 87.15772, "nearest_udo": "МБУ ДО Детско-юношеская спортивная школа № 3", "distance_km": 0.41, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное специальное (коррекционное) образовательное учреждение для обучающихся, воспитанников с отклонениями в развитии \"Специальная (коррекционная) общеобразовательная школа - интернат № 20\" VIII вида", "school_lat": 53.76554, "school_lon": 87.1109, "nearest_udo": "МАУ ДО «Детско-юношеский центр «Орион»", "distance_km": 0.46, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение для детей - сирот и детей, оставшихся без попечения родителей \"Детский дом - школа № 74\"", "school_lat": 53.76101, "school_lon": 87.1061, "nearest_udo": "МАУ ДО «Детско-юношеский центр «Орион»", "distance_km": 0.64, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждениедля детей-сирот и детей, оставшихся без попечения родителей \"Детский дом № 3\"", "school_lat": 53.76037, "school_lon": 87.15158, "nearest_udo": "МБ ОУ ДО «Городской Дворец детского (юношеского) творчества им. Н.К. Крупской»", "distance_km": 0.71, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждениедля детей-сирот и детей, оставшихся без попечения родителей \"Детский дом № 5\"", "school_lat": 53.76201, "school_lon": 87.12541, "nearest_udo": "МАУ ДО «Детско-юношеский центр «Орион»", "distance_km": 0.64, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Атамановская средняя общеобразовательная школа", "school_lat": 53.78517, "school_lon": 87.39, "nearest_udo": "МБУ ДО «Дом творчества «Вектор»", "distance_km": 2.56, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 55", "school_lat": 53.75156, "school_lon": 87.16682, "nearest_udo": "МАУ ДО «Детско-юношеский центр «Орион»", "distance_km": 0.76, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Вечерняя (сменная) общеобразовательная школа № 1", "school_lat": 53.76707, "school_lon": 87.10789, "nearest_udo": "МБУ ДО «Центр детского (юношеского) технического творчества «Меридиан»", "distance_km": 0.67, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Средняя общеобразовательная школа № 90", "school_lat": 53.74761, "school_lon": 87.07144, "nearest_udo": "МБУ ДО «Дом детского творчества № 2»", "distance_km": 2.02, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Специальная (коррекционная) образовательная школа-интернат № 66 для детей сирот и детей, оставшихся без попечения родителей с отклонениями в развитии VIII вида", "school_lat": 53.74038, "school_lon": 87.11003, "nearest_udo": "МБ ОУ ДО «Городской Дворец детского (юношеского) творчества им. Н.К. Крупской»", "distance_km": 1.22, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждениедля детей-сирот и детей, оставшихся без попечения родителей \"Детский дом № 1\"", "school_lat": 53.77497, "school_lon": 87.2063, "nearest_udo": "МБУ ДО «Дом детского творчества №1»", "distance_km": 0.02, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Средняя общеобразовательная школа № 49", "school_lat": 53.82393, "school_lon": 87.1679, "nearest_udo": "МБУ ДО Детско-юношеская спортивная школа № 3", "distance_km": 0.22, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "МБ НОУ \"Лицей № 11\"", "school_lat": 53.77839, "school_lon": 87.2708, "nearest_udo": "МБУ ДО «Центр развития творчества «Уголёк»", "distance_km": 0.94, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное общеобразовательное учреждение \"Средняя общеобразовательная школа № 28", "school_lat": 53.80075, "school_lon": 87.37851, "nearest_udo": "МБУ ДО «Дом творчества «Вектор»", "distance_km": 0.8, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Нетиповое муниципальное общеобразовательное учреждение \"Лицей № 111\"", "school_lat": 53.75805, "school_lon": 87.12862, "nearest_udo": "МБУ ДО «Станция юных натуралистов»", "distance_km": 0.76, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Тайлепская основная общеобразовательная школа", "school_lat": 53.78539, "school_lon": 87.38935, "nearest_udo": "МБУ ДО «Дом творчества «Вектор»", "distance_km": 2.51, "accessible": true, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Бунгурская основная общеобразовательная школа", "school_lat": 53.7449, "school_lon": 87.00118, "nearest_udo": "МБУ ДО «Дом детского творчества № 2»", "distance_km": 6.54, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Ерунаковская основная общеобразовательная школа", "school_lat": 53.9991, "school_lon": 87.18792, "nearest_udo": "МБ ОУ ДО «Дом детского творчества № 5»", "distance_km": 12.53, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Лысинская основная общеобразовательная школа", "school_lat": 53.68321, "school_lon": 87.17607, "nearest_udo": "МАУ ДО «Военно-патриотический парк «Патриот»", "distance_km": 6.71, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Красулинская средняя общеобразовательная школа", "school_lat": 54.0249, "school_lon": 87.07827, "nearest_udo": "МБ ОУ ДО Детско-юношеская спортивная школа №7", "distance_km": 14.5, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Кузедеевская общеобразовательная средняя школа", "school_lat": 53.335879, "school_lon": 87.2032304, "nearest_udo": "МАУ ДО «Военно-патриотический парк «Патриот»", "distance_km": 45.04, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Куртуковская общеобразовательная средняя школа", "school_lat": 53.64006, "school_lon": 87.21873, "nearest_udo": "МАУ ДО «Военно-патриотический парк «Патриот»", "distance_km": 11.21, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Металлурговская средняя общеобразовательная школа", "school_lat": 53.90139, "school_lon": 87.03242, "nearest_udo": "МБ ОУ ДО Детско-юношеская спортивная школа №7", "distance_km": 5.08, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Степновская средняя общеобразовательная школа", "school_lat": 53.95409, "school_lon": 87.1166, "nearest_udo": "МБ ОУ ДО Детско-юношеская спортивная школа №7", "distance_km": 6.49, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Сосновская общеобразовательная средняя школа", "school_lat": 53.67466, "school_lon": 87.16175, "nearest_udo": "МАУ ДО «Военно-патриотический парк «Патриот»", "distance_km": 7.93, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Тальжинская средняя общеобразовательная школа", "school_lat": 53.7607, "school_lon": 87.41488, "nearest_udo": "МБУ ДО «Дом творчества «Вектор»", "distance_km": 5.45, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Безруковская средняя общеобразовательная школа", "school_lat": 53.7768113, "school_lon": 87.5603647, "nearest_udo": "МБУ ДО «Дом творчества «Вектор»", "distance_km": 13.04, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Кузедеевская специальная (коррекционная) школа-интернат VIII вида", "school_lat": 53.6604, "school_lon": 87.15068, "nearest_udo": "МАУ ДО «Военно-патриотический парк «Патриот»", "distance_km": 9.68, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Бенжерепская средняя общеобразовательная школа", "school_lat": 53.63267, "school_lon": 86.82245, "nearest_udo": "МБУ ДО «Дом детского творчества № 2»", "distance_km": 22.84, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Загорская средняя общеобразовательная школа", "school_lat": 53.75781, "school_lon": 87.00647, "nearest_udo": "МБУ ДО «Дом детского творчества № 2»", "distance_km": 6.07, "accessible": false, "enrollment_age": "6–17 лет"},
+            {"school_name": "Муниципальное образовательное учреждение\"Ильинская средняя общеобразовательная школа", "school_lat": 53.89843, "school_lon": 87.1659, "nearest_udo": "МБ ОУ ДО «Дом детского творчества № 5»", "distance_km": 2.78, "accessible": true, "enrollment_age": "6–17 лет"}
+        ];
+
+        var uniqueUdos = {};
+        schoolsData.forEach(function(school) {
+            if (!uniqueUdos[school.nearest_udo]) {
+                var baseLat = school.school_lat;
+                var baseLon = school.school_lon;
+                var fakeLat = baseLat + (Math.random() - 0.5) * 0.002;
+                var fakeLon = baseLon + (Math.random() - 0.5) * 0.002;
+                uniqueUdos[school.nearest_udo] = {name: school.nearest_udo, lat: fakeLat, lon: fakeLon};
+            }
+        });
+        var udoData = Object.values(uniqueUdos);
+
+        var greenIcon = L.divIcon({
+            className: 'school-icon-available',
+            html: '✓',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+        var redIcon = L.divIcon({
+            className: 'school-icon-unavailable',
+            html: '<div class="cross"></div>',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+        var pinkIcon = L.divIcon({
+            className: 'udo-icon',
+            html: 'ДО',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
+        });
+
+        var allSchoolMarkers = [];
+        var allUdoMarkers = [];
+
+        schoolsData.forEach(function(school) {
+            var schoolMarker = L.marker([school.school_lat, school.school_lon], {
+                icon: school.accessible ? greenIcon : redIcon
+            });
+            var popupContent = `<b>${school.school_name}</b><br>Ближайшее УДО: ${school.nearest_udo}<br>Расстояние: ${school.distance_km} км<br>Доступно: ${school.accessible ? '✅ Да' : '❌ Нет'}<br>Возраст зачисления: ${school.enrollment_age}`;
+            schoolMarker.bindPopup(popupContent);
+            allSchoolMarkers.push(schoolMarker);
+
+            var option = document.createElement('option');
+            var schoolNumberMatch = school.school_name.match(/(?:школа|гимназия|лицей)\s*№?\s*(\d+)/i);
+            var displayName = schoolNumberMatch ? `Школа №${schoolNumberMatch[1]}` : school.school_name;
+            option.value = school.school_name;
+            option.text = displayName;
+            document.getElementById('school-select').appendChild(option);
+        });
+
+        udoData.forEach(function(udo) {
+            var udoMarker = L.marker([udo.lat, udo.lon], {
+                icon: pinkIcon
+            });
+            var udoPopupContent = `<b>${udo.name}</b>`;
+            udoMarker.bindPopup(udoPopupContent);
+            allUdoMarkers.push(udoMarker);
+        });
+
+        function clearMap() {
+            allSchoolMarkers.forEach(marker => map.removeLayer(marker));
+            allUdoMarkers.forEach(marker => map.removeLayer(marker));
+        }
+
+        function showAllMarkers() {
+            clearMap();
+            allSchoolMarkers.forEach(marker => map.addLayer(marker));
+            allUdoMarkers.forEach(marker => map.addLayer(marker));
+        }
+
+        function showSchoolAndNearbyUdo(schoolName) {
+            clearMap();
+            var selectedSchool = schoolsData.find(s => s.school_name === schoolName);
+            if (selectedSchool) {
+                var schoolLatLng = [selectedSchool.school_lat, selectedSchool.school_lon];
+                var schoolMarker = allSchoolMarkers.find(m => m.getLatLng().equals(L.latLng(schoolLatLng)));
+                if (schoolMarker) {
+                    map.addLayer(schoolMarker);
+                    map.setView(schoolLatLng, 14);
+                    allUdoMarkers.forEach(function(udoMarker) {
+                        var udoLatLng = udoMarker.getLatLng();
+                        var distance = map.distance(schoolLatLng, udoLatLng) / 1000;
+                        if (distance <= 3) {
+                            map.addLayer(udoMarker);
+                        }
+                    });
+                }
+            }
+        }
+
+        showAllMarkers();
+
+        document.getElementById('school-select').addEventListener('change', function() {
+            var selectedValue = this.value;
+            if (selectedValue === 'all') {
+                showAllMarkers();
+            } else {
+                showSchoolAndNearbyUdo(selectedValue);
+            }
+        });
+    </script>
+</body>
+</html>
